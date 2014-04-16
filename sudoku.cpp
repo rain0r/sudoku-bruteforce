@@ -2,7 +2,6 @@
 #include <iostream>
 #include <boost/thread.hpp>
 #include <boost/timer/timer.hpp>
-#include <boost/lockfree/queue.hpp>
 #include <boost/multi_array.hpp>
 
 using namespace std;
@@ -11,6 +10,8 @@ typedef boost::multi_array<int,2> barray;
 barray start_sudoku_field(boost::extents[9][9]);
 list<barray> field_stack;
 bool solved;
+boost::mutex mtx_;
+boost::thread_group sudoku_threads;
 
 void init_multi_dim_array() {
     int init_val[9][9] = {
@@ -147,45 +148,51 @@ void print_matrix(barray field) {
     }
 }
 
-void algo(barray field) {
+void solve(barray field) {
+    mtx_.lock();
     int count = 0;
     field_stack.push_back(field);
 
     list<barray>::iterator iter;
-        for (iter = field_stack.begin(); iter != field_stack.end(); iter++) {
-            for (int i = 0; i < 9; i++) {
-                for (int j = 0; j < 9; j++) {
-                    if ((*iter)[i][j] == 0) {
-                        for (int k = 1; k <= 9; k++) {
-                            barray copy = *iter;
-                            // field_stack.erase(iter);
-                            copy[i][j] = k;
-                            if (is_solved(copy)) {
-                                cout << "Solved" << endl;
-                                print_matrix(copy);
-                                return;
-                            }
-                            field_stack.push_back(copy);
+    for (iter = field_stack.begin(); iter != field_stack.end(); iter++) {
+        for (int i = 0; i < 9; i++) {
+            for (int j = 0; j < 9; j++) {
+                if ((*iter)[i][j] == 0) {
+                    for (int k = 1; k <= 9; k++) {
+                        barray copy = *iter;
+                        // field_stack.erase(iter);
+                        copy[i][j] = k;
+                        if (is_solved(copy)) {
+                            cout << "Solved" << endl;
+                            print_matrix(copy);
+                            // sudoku_threads.interrupt_all();
+                            // return;
+                            exit(0);
                         }
+                        field_stack.push_back(copy);
                     }
                 }
             }
         }
+    }
+    mtx_.unlock();
 }
 
 int main(int argc, char* argv[]) {
+    // boost::timer::auto_cpu_timer timer;
     cout << "Blatt01/Aufgabe 2" << endl;
 
-    boost::lockfree::queue<int> queue(128);
-    int thread_count = 1;
-    boost::thread_group sudoku_threads;
+    int thread_count = 4;
 
     init_multi_dim_array();
-    algo(start_sudoku_field);
+    // solve(start_sudoku_field);
 
     for (int i = 0; i != thread_count; i++) {
-        sudoku_threads.add_thread(new boost::thread(algo, start_sudoku_field));
+        boost::thread *t1 = new boost::thread(solve, start_sudoku_field);
+        sudoku_threads.add_thread(t1);
     }
+
+    sudoku_threads.join_all();
 
     return 0;
 }
