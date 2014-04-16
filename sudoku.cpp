@@ -10,18 +10,19 @@ using namespace std;
 typedef boost::multi_array<int,2> barray;
 barray start_sudoku_field(boost::extents[9][9]);
 list<barray> field_stack;
+bool solved;
 
 void init_multi_dim_array() {
     int init_val[9][9] = {
-        { 1, 2, 3, 4, 5, 6, 7, 8, 9 },
-        { 2, 3, 4, 5, 6, 7, 8, 9, 1 },
-        { 3, 4, 5, 6, 7, 8, 9, 1, 2 },
-        { 4, 5, 6, 7, 8, 9, 1, 2, 3 },
-        { 5, 6, 7, 8, 9, 1, 2, 3, 4 },
-        { 6, 7, 8, 9, 1, 2, 3, 4, 5 },
-        { 7, 0, 0, 5, 0, 0, 4, 0, 0 },
-        { 8, 9, 1, 2, 3, 4, 5, 6, 7 },
-        { 9, 1, 2, 3, 4, 5, 6, 7, 0 }
+        { 6, 3, 2, 7, 8, 1, 9, 4, 5 },
+        { 4, 8, 7, 5, 9, 6, 2, 1, 3 },
+        { 5, 1, 9, 2, 4, 3, 8, 7, 6 },
+        { 8, 6, 4, 3, 5, 2, 7, 9, 1 },
+        { 7, 5, 1, 9, 6, 8, 3, 2, 4 },
+        { 2, 9, 3, 1, 7, 4, 6, 5, 8 },
+        { 9, 4, 5, 6, 3, 7, 1, 8, 2 },
+        { 1, 7, 6, 8, 2, 5, 4, 3, 9 },
+        { 3, 2, 8, 4, 1, 9, 5, 0, 0 }
     };
 
     for (int i = 0; i < 9; i++) {
@@ -72,10 +73,10 @@ bool check_all_quadrat(barray field) {
                     for (int x = x_y_quad[j]; x <= (x_y_quad[j]+2); x++) {
                         if (k == field[x][y]) {
                             if (count > 0) {
-                                cout << "Duplicates in a quadrat: ";
-                                cout << k << " at (";
-                                cout << x_y_quad[i]+1 << "|";
-                                cout << x_y_quad[j]+1 << ")" << endl;
+                                // cout << "Duplicates in a quadrat: ";
+                                // cout << k << " at (";
+                                // cout << x_y_quad[i]+1 << "|";
+                                // cout << x_y_quad[j]+1 << ")" << endl;
                                 return false;
                             }
                             count++;
@@ -87,6 +88,7 @@ bool check_all_quadrat(barray field) {
             }
         }
     }
+    return true;
 }
 
 bool is_solved(barray field) {
@@ -104,15 +106,16 @@ bool is_solved(barray field) {
     for (int i = 1; i <= 9; i++) {
 
         for (int j = 0; j < 9; j++) {
+            int xxx = 0;
             if (get_row_elem_count(field, j, i) > 1) {
-                cout << "Duplicate Number in row " << j+1 << ": " << i << endl;
+                // cout << "Duplicate Number in row " << j+1 << ": " << i << endl;
                 return false;
             }
         }
 
         for (int k = 0; k < 9; k++) {
             if (get_col_elem_count(field, k, i) > 1) {
-                cout << "Duplicate Number in column " << k+1 << ": " << i << endl;
+                // cout << "Duplicate Number in column " << k+1 << ": " << i << endl;
                 return false;
             }
         }
@@ -122,6 +125,8 @@ bool is_solved(barray field) {
     if (!check_all_quadrat(field)) {
         return false;
     }
+
+    return true;
 }
 
 void print_matrix(barray field) {
@@ -136,7 +141,7 @@ void print_matrix(barray field) {
             if (x%3 == 0 && x!=0) {
                 cout << " | ";
             }
-            cout << " " << field[x][y] << " ";
+            cout << " " << field[y][x] << " ";
         }
         cout << endl;
     }
@@ -147,24 +152,25 @@ void algo(barray field) {
     field_stack.push_back(field);
 
     list<barray>::iterator iter;
-    for (iter = field_stack.begin(); iter != field_stack.end(); iter++) {
-        if (is_solved(*iter)) {
-            cout << "Solved" << endl;
-            return;
-        }
-
-        for (int i = 0; i < 9; i++) {
-            for (int j = 0; j < 9; j++) {
-                if ((*iter)[i][j] == 0) {
-                    for (int k = 1; k <= 9; k++) {
-                        barray copy = *iter;
-                        copy[i][j] = k;
-                        field_stack.push_back(copy);
+        for (iter = field_stack.begin(); iter != field_stack.end(); iter++) {
+            for (int i = 0; i < 9; i++) {
+                for (int j = 0; j < 9; j++) {
+                    if ((*iter)[i][j] == 0) {
+                        for (int k = 1; k <= 9; k++) {
+                            barray copy = *iter;
+                            // field_stack.erase(iter);
+                            copy[i][j] = k;
+                            if (is_solved(copy)) {
+                                cout << "Solved" << endl;
+                                print_matrix(copy);
+                                return;
+                            }
+                            field_stack.push_back(copy);
+                        }
                     }
                 }
             }
         }
-    }
 }
 
 int main(int argc, char* argv[]) {
